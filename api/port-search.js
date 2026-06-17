@@ -39,10 +39,14 @@ const F = {
 
 // Field NAMES used inside filterByFormula (formulas cannot reference field IDs).
 const FN = {
+  status:        "STATUS",
   debarkDate:    "DATE TO",
   embarkPort:    "Embark Port - Link",
   disembarkPort: "Disembark Port - Link",
 };
+
+// Engagement statuses treated as "confirmed" (exact single-select option names).
+const CONFIRMED_STATUSES = ["Confirmed", "Changed/Confirmed"];
 
 // Primary-field IDs used to resolve linked record names.
 const PORT_NAME_FIELD_ID = "fldqxwoNvUnGXaTIN"; // Ports → "Port Name"
@@ -163,9 +167,12 @@ async function handleSearch(res, rawPort) {
   if (port.length < 2) return send(res, 400, { error: "Enter at least 2 characters." });
 
   const needle = port.toLowerCase();
+  const statusClause =
+    "OR(" + CONFIRMED_STATUSES.map((s) => `{${FN.status}}='${s}'`).join(",") + ")";
   const formula =
     `AND(` +
       `IS_AFTER({${FN.debarkDate}}, DATEADD(TODAY(), -1, 'days')),` +
+      statusClause + `,` +
       `OR(` +
         `FIND("${needle}", LOWER(ARRAYJOIN({${FN.embarkPort}}, ", "))),` +
         `FIND("${needle}", LOWER(ARRAYJOIN({${FN.disembarkPort}}, ", ")))` +

@@ -1,9 +1,9 @@
 # TAD Cruise — Port Search (staff tool)
 
-Type a port, get every **upcoming** engagement that embarks or debarks there:
-act name, ship, and embark → debark dates. Reads live from the Cruise
-Engagements base. Results can be exported to CSV (the **Download CSV** button
-appears once you have results and exports exactly what's shown).
+Type a port, get every **confirmed, upcoming** engagement that embarks or
+debarks there: act name, ship, and embark → debark dates. Reads live from the
+Cruise Engagements base. Results can be exported to CSV (the **Download CSV**
+button appears once you have results and exports exactly what's shown).
 
 ## Files
 - `index.html` — the staff-facing page. No token inside it.
@@ -41,8 +41,11 @@ the part that actually makes it safe to share with the team.
   later. Anything fully in the past is excluded.
 - **Port match:** case-insensitive, matches on either the Embark or Disembark
   linked-port field. Each row is tagged "Embarks here" / "Debarks here".
-- **Cancelled:** included from the source but hidden by default (toggle on the
-  page). "Available" holds are shown and labelled.
+- **Confirmed only:** only engagements with STATUS `Confirmed` or
+  `Changed/Confirmed` are returned. Available holds, Pending, Offered,
+  Cancelled, Completed, etc. are excluded server-side. (To match strictly
+  `Confirmed`, remove `Changed/Confirmed` from `CONFIRMED_STATUSES` in the
+  function.)
 - **Ship:** shows "not yet assigned" when no ship is linked yet (common on
   availability holds before a contract firms up).
 

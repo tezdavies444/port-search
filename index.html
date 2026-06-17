@@ -157,7 +157,6 @@
   </form>
 
   <div class="controls">
-    <label class="toggle"><input type="checkbox" id="hideCancelled" checked /> Hide cancelled</label>
     <span class="resultcount" id="count"></span>
     <button type="button" id="csvBtn" class="csv" hidden>Download CSV</button>
   </div>
@@ -165,11 +164,11 @@
   <div class="results" id="results">
     <div class="state">
       <h3>Search a port to begin</h3>
-      <p>Results show upcoming engagements only — anything that has already sailed is left out.</p>
+      <p>Shows confirmed upcoming engagements only — past sailings and unconfirmed holds are left out.</p>
     </div>
   </div>
 
-  <footer id="foot">Reads live from the Cruise Engagements base · upcoming engagements only</footer>
+  <footer id="foot">Reads live from the Cruise Engagements base · confirmed upcoming engagements only</footer>
 </div>
 
 <script>
@@ -182,7 +181,6 @@
   var goBtn = document.getElementById("go");
   var resultsEl = document.getElementById("results");
   var countEl = document.getElementById("count");
-  var hideCancelled = document.getElementById("hideCancelled");
   var csvBtn = document.getElementById("csvBtn");
   var portlist = document.getElementById("portlist");
 
@@ -226,14 +224,6 @@
     });
   }
 
-  function statusClass(s) {
-    var k = (s || "").toLowerCase();
-    if (k.indexOf("confirm") > -1) return "st-confirmed";
-    if (k.indexOf("avail") > -1) return "st-available";
-    if (k.indexOf("cancel") > -1) return "st-cancelled";
-    return "st-other";
-  }
-
   function dirChip(row) {
     if (row.direction === "embark") return '<span class="chip dir-embark">Embarks here</span>';
     if (row.direction === "debark") return '<span class="chip dir-debark">Debarks here</span>';
@@ -242,22 +232,19 @@
 
   function render() {
     var rows = lastRows.slice();
-    if (hideCancelled.checked) {
-      rows = rows.filter(function (r) { return (r.status || "").toLowerCase().indexOf("cancel") === -1; });
-    }
     displayedRows = rows;
 
     if (!rows.length) {
       countEl.textContent = "";
       csvBtn.hidden = true;
       resultsEl.innerHTML =
-        '<div class="state"><h3>No upcoming engagements at ' + esc(lastPort) + '</h3>' +
-        '<p>Nobody is currently scheduled to embark or debark here. Try another spelling, or clear "Hide cancelled".</p></div>';
+        '<div class="state"><h3>No confirmed engagements at ' + esc(lastPort) + '</h3>' +
+        '<p>No confirmed booking embarks or debarks here in the future. Try another spelling.</p></div>';
       return;
     }
 
     csvBtn.hidden = false;
-    countEl.innerHTML = "<b>" + rows.length + "</b> engagement" + (rows.length === 1 ? "" : "s") +
+    countEl.innerHTML = "<b>" + rows.length + "</b> confirmed engagement" + (rows.length === 1 ? "" : "s") +
       " at <b>" + esc(lastPort) + "</b>";
 
     var body = rows.map(function (r) {
@@ -270,14 +257,13 @@
           '<td data-l="Ship"><span class="' + shipCls + '">' + shipTxt + '</span></td>' +
           '<td data-l="Embark → Debark"><div class="dates">' + fmt(r.embarkDate) + '  →  ' + fmt(r.debarkDate) + '</div>' +
             '<div class="leg">' + leg + '</div></td>' +
-          '<td data-l="Status"><span class="st ' + statusClass(r.status) + '">' + esc(r.status || "—") + '</span></td>' +
         '</tr>'
       );
     }).join("");
 
     resultsEl.innerHTML =
       '<table><thead><tr>' +
-        '<th>Act</th><th>Ship</th><th>Embark → Debark</th><th>Status</th>' +
+        '<th>Act</th><th>Ship</th><th>Embark → Debark</th>' +
       '</tr></thead><tbody>' + body + '</tbody></table>';
   }
 
@@ -287,7 +273,7 @@
     resultsEl.innerHTML = '<div class="state' + (isErr ? ' err' : '') + '">' + html + '</div>';
   }
 
-  // --- CSV export (exports exactly what's shown, respecting Hide cancelled) ---
+  // --- CSV export (exports exactly the confirmed rows shown) ---
   function csvField(v) {
     return '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
   }
@@ -295,12 +281,12 @@
     return d === "embark" ? "Embarks here" : d === "debark" ? "Debarks here" : "Embarks & debarks";
   }
   function buildCsv(rows) {
-    var head = ["Act", "Ship", "Embark date", "Debark date", "Embark port", "Disembark port", "At this port", "Status"];
+    var head = ["Act", "Ship", "Embark date", "Debark date", "Embark port", "Disembark port", "At this port"];
     var lines = [head.map(csvField).join(",")];
     rows.forEach(function (r) {
       lines.push([
         r.act, r.ship || "", r.embarkDate || "", r.debarkDate || "",
-        r.embarkPort || "", r.disembarkPort || "", dirLabel(r.direction), r.status || ""
+        r.embarkPort || "", r.disembarkPort || "", dirLabel(r.direction)
       ].map(csvField).join(","));
     });
     return "\uFEFF" + lines.join("\r\n"); // BOM so Excel reads UTF-8 correctly
@@ -340,8 +326,6 @@
       goBtn.disabled = false;
     }
   });
-
-  hideCancelled.addEventListener("change", function () { if (lastPort) render(); });
 
   // Populate port autocomplete (best effort; search still works without it).
   (async function loadPorts() {
